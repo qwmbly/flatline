@@ -1,0 +1,9 @@
+[Unit]
+Description=Flatline SMART long self-test
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/flatline/flatline.py long-test
+Nice=19
+IOSchedulingClass=idle

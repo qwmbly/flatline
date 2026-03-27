@@ -1,0 +1,31 @@
+# Flatline - SMART Monitoring Configuration
+# Copy this file to /etc/flatline/config.toml and edit as needed.
+
+[email]
+# Required: email address to receive alerts
+to = "user@example.com"
+
+# Optional: sender address (default shown)
+# from = "flatline@nas.local"
+
+# Optional: subject line prefix (default shown)
+# subject_prefix = "[FLATLINE]"
+
+[thresholds]
+# Temperature in Celsius; alert if any drive exceeds this (default: 55)
+# temperature_max = 55
+
+# Sector/error counts (reallocated, pending, uncorrectable) alert on
+# any increase from previous reading. No threshold configuration needed.
+
+[drives]
+# Devices to skip during scanning. Use device paths from smartctl --scan.
+# Example: exclude = ["/dev/sdb", "/dev/sdc"]
+exclude = []
+
+[paths]
+# Override auto-detected binary paths or file locations if needed.
+# msmtp = "/usr/bin/msmtp"
+# smartctl = "/usr/sbin/smartctl"
+# state_file = "/opt/flatline/state.json"
+# history_db = "/opt/flatline/history.db"

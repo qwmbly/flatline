@@ -1,0 +1,10 @@
+[Unit]
+Description=Flatline SMART short self-test (weekly)
+
+[Timer]
+OnCalendar=weekly
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

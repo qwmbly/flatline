@@ -1,0 +1,10 @@
+[Unit]
+Description=Flatline SMART long self-test (monthly)
+
+[Timer]
+OnCalendar=monthly
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

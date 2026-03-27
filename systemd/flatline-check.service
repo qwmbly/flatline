@@ -1,0 +1,9 @@
+[Unit]
+Description=Flatline SMART health check
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/flatline/flatline.py check
+Nice=19
+IOSchedulingClass=idle
