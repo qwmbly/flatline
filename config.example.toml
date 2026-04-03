@@ -29,3 +29,4 @@ exclude = []
 # smartctl = "/usr/sbin/smartctl"
 # state_file = "/opt/flatline/state.json"
 # history_db = "/opt/flatline/history.db"
+# log_dir = "/opt/flatline/logs"

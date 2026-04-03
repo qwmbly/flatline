@@ -23,7 +23,7 @@ Flatline runs on a schedule via systemd timers:
 | `flatline-short-test` | Weekly | Triggers short self-tests on all drives |
 | `flatline-long-test` | Monthly | Triggers long self-tests on all drives |
 
-State is tracked by drive serial number (not device path), so `/dev/sdX` reassignment across reboots won't cause false alerts. Historical readings are stored in SQLite for trend analysis.
+State is tracked by drive serial number (not device path), so `/dev/sdX` reassignment across reboots won't cause false alerts. Historical readings are stored in SQLite for trend analysis. Structured JSON-lines logs are written for ingestion by log aggregators (Splunk, etc.).
 
 ## Requirements
 

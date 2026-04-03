@@ -4,6 +4,7 @@
 import argparse
 import json
 import logging
+import logging.handlers
 import shutil
 import sqlite3
 import subprocess
@@ -15,6 +16,7 @@ from pathlib import Path
 DEFAULT_CONFIG_PATH = Path("/opt/flatline/config.toml")
 DEFAULT_STATE_PATH = Path("/opt/flatline/state.json")
 DEFAULT_DB_PATH = Path("/opt/flatline/history.db")
+DEFAULT_LOG_DIR = Path("/opt/flatline/logs")
 
 TRACKED_ATTRS = {
     5: "Reallocated_Sector_Ct",
@@ -39,10 +41,76 @@ DEFAULTS = {
         "smartctl": "",
         "state_file": str(DEFAULT_STATE_PATH),
         "history_db": str(DEFAULT_DB_PATH),
+        "log_dir": str(DEFAULT_LOG_DIR),
     },
 }
 
 log = logging.getLogger("flatline")
+data_log = logging.getLogger("flatline.data")
+
+LOG_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+LOG_BACKUP_COUNT = 3
+
+
+def setup_logging(log_dir: Path, verbose: bool = False) -> None:
+    """Configure logging to console, operational log file, and data log file."""
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Console handler
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    ))
+
+    # Operational log file (human-readable)
+    op_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "flatline.log",
+        maxBytes=LOG_MAX_BYTES,
+        backupCount=LOG_BACKUP_COUNT,
+    )
+    op_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    ))
+
+    log.setLevel(logging.DEBUG if verbose else logging.INFO)
+    log.addHandler(console)
+    log.addHandler(op_handler)
+
+    # Structured data log (JSON-lines, for Splunk)
+    data_handler = logging.handlers.RotatingFileHandler(
+        log_dir / "smart_readings.log",
+        maxBytes=LOG_MAX_BYTES,
+        backupCount=LOG_BACKUP_COUNT,
+    )
+    data_handler.setFormatter(logging.Formatter("%(message)s"))
+    data_log.setLevel(logging.INFO)
+    data_log.addHandler(data_handler)
+    data_log.propagate = False
+
+
+def log_readings(readings: list[dict], timestamp: str, command: str) -> None:
+    """Write structured JSON-lines entries to the data log."""
+    for r in readings:
+        entry = {
+            "timestamp": timestamp,
+            "command": command,
+            "device": r["device"],
+            "model": r["model"],
+            "serial": r["serial"],
+            "health": r["health"],
+            "temperature": r["temperature"],
+            "reallocated_sector_ct": r["reallocated_sector_ct"],
+            "current_pending_sector": r["current_pending_sector"],
+            "offline_uncorrectable": r["offline_uncorrectable"],
+            "power_on_hours": r["power_on_hours"],
+        }
+        if r.get("media_errors") is not None:
+            entry["media_errors"] = r["media_errors"]
+        if r.get("last_test_status"):
+            entry["last_test_status"] = r["last_test_status"]
+        data_log.info(json.dumps(entry, separators=(",", ":")))
 
 
 # ---------------------------------------------------------------------------
@@ -436,6 +504,9 @@ def cmd_check(config: dict, smartctl: str, msmtp: str) -> int:
             continue
         readings.append(data)
 
+    # Log structured readings
+    log_readings(readings, timestamp, "check")
+
     # Load previous state and compare
     previous_state = load_state(state_path)
     alerts = compare_readings(readings, previous_state, config)
@@ -573,13 +644,8 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
     config = load_config(args.config)
+    setup_logging(Path(config["paths"]["log_dir"]), verbose=args.verbose)
     smartctl = find_binary("smartctl", config["paths"]["smartctl"])
     msmtp = find_binary("msmtp", config["paths"]["msmtp"])
 
